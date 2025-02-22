@@ -1,0 +1,51 @@
+name: Odoo17-Enterprise-Docker-Deployment
+
+services:
+  db-17:
+    image: postgres:15
+    restart: always
+    volumes:
+      - odoo-db-17:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - odoo-network-17
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  odoo-17:
+    image: odoo:17
+    depends_on:
+      - db-17
+    restart: always
+    ports:
+      - "${HOST_PORT}:${CONTAINER_PORT}"
+    environment:
+      - HOST=db-17
+      - USER=${ODOO_USER}
+      - PASSWORD=${PASSWORD}
+      - DATABASE=${DATABASE}
+    volumes:
+      - odoo-data-17:/var/lib/odoo
+      - ./addons:/mnt/extra-addons
+      - ./enterprise:/mnt/enterprise-addons
+      - ./etc/odoo.conf:/etc/odoo/odoo.conf
+    networks:
+      - odoo-network-17
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8071 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  odoo-network-17:
+
+volumes:
+  odoo-data-17:
+  odoo-db-17:
